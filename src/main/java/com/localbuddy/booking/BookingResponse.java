@@ -1,0 +1,47 @@
+package com.localbuddy.booking;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record BookingResponse(
+        UUID id,
+        String bookingReference,
+        UUID travelerUserId,
+        String guestName,
+        String guestEmail,
+        String guestPhone,
+        boolean guestEmailVerified,
+        boolean guestPhoneVerified,
+        BookingSource bookingSource,
+        UUID localProfileId,
+        UUID experienceId,
+        UUID availabilitySlotId,
+        Integer guestsCount,
+        BookingStatus status,
+        BigDecimal pricePerGuest,
+        BigDecimal totalAmount,
+        String currency,
+        String travelerNote,
+        String localResponseNote,
+        String cancellationReason,
+        Instant requestedAt,
+        Instant acceptedAt,
+        Instant declinedAt,
+        Instant cancelledAt,
+        Instant completedAt,
+        Instant createdAt,
+        Instant updatedAt,
+        Boolean guestTermsAccepted,
+        Boolean guestSafetyAccepted,
+        Boolean guestLiabilityAccepted,
+        String guestConsentVersion,
+        Instant guestConsentAcceptedAt,
+        UUID promoCodeId,
+        UUID referralCodeId,
+        BigDecimal originalAmount,
+        BigDecimal discountAmount,
+        String promoCodeText,
+        String referralCodeText
+) {
+}

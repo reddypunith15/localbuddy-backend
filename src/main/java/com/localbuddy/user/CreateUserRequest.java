@@ -1,0 +1,25 @@
+package com.localbuddy.user;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+public record CreateUserRequest(
+
+        @NotBlank(message = "Full name is required")
+        @Size(max = 150, message = "Full name cannot exceed 150 characters")
+        String fullName,
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be valid")
+        @Size(max = 255, message = "Email cannot exceed 255 characters")
+        String email,
+
+        @Size(max = 30, message = "Phone cannot exceed 30 characters")
+        String phone,
+
+        @NotNull(message = "Role is required")
+        UserRole role
+) {
+}

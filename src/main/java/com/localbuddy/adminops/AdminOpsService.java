@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class AdminOpsService {
@@ -23,15 +26,18 @@ public class AdminOpsService {
     private final LocalProfileRepository localProfileRepository;
     private final ExperienceRepository experienceRepository;
     private final ExperienceCategoryRepository experienceCategoryRepository;
+    private final CityRepository cityRepository;
 
     public AdminOpsService(UserRepository userRepository,
                            LocalProfileRepository localProfileRepository,
                            ExperienceRepository experienceRepository,
-                           ExperienceCategoryRepository experienceCategoryRepository) {
+                           ExperienceCategoryRepository experienceCategoryRepository,
+                           CityRepository cityRepository) {
         this.userRepository = userRepository;
         this.localProfileRepository = localProfileRepository;
         this.experienceRepository = experienceRepository;
         this.experienceCategoryRepository = experienceCategoryRepository;
+        this.cityRepository = cityRepository;
     }
 
     @Transactional
@@ -53,13 +59,24 @@ public class AdminOpsService {
                 });
 
         profile.setDisplayName(requiredTrim(request.displayName()));
-        profile.setBio(optionalTrim(request.bio()));
-        profile.setCity(requiredTrim(request.city()));
-        profile.setCountry(requiredTrim(request.country()));
-        profile.setLanguages(cleanList(request.languages()));
-        profile.setInterests(cleanList(request.interests()));
-        profile.setOccupation(optionalTrim(request.occupation()));
-        profile.setProfilePhotoUrl(optionalTrim(request.profilePhotoUrl()));
+        profile.setPhoneNumber(defaulted(request.phoneNumber()));
+        profile.setBio(defaulted(request.bio()));
+        profile.setProfilePhotoUrl(defaulted(request.profilePhotoUrl()));
+        profile.setHostCity(defaulted(request.hostCity()));
+        profile.setZipCode(defaulted(request.zipCode()));
+        profile.setCountry(defaulted(request.country()));
+        profile.setExperienceLanguages(cleanList(request.experienceLanguages()));
+        profile.setExperienceCities(resolveCities(request.experienceCityIds()));
+        profile.setExperienceCategories(resolveCategories(request.experienceCategoryIds()));
+        profile.setMotivation(defaulted(request.motivation()));
+        profile.setExperienceInfo(defaulted(request.experienceInfo()));
+        profile.setLegalFirstName(defaulted(request.legalFirstName()));
+        profile.setLegalLastName(defaulted(request.legalLastName()));
+        profile.setPreferredName(defaulted(request.preferredName()));
+        profile.setCurrentAddress(defaulted(request.currentAddress()));
+        profile.setAccountNumber(optionalTrim(request.accountNumber()));
+        profile.setAccountName(optionalTrim(request.accountName()));
+        profile.setSwiftCode(optionalTrim(request.swiftCode()));
 
         profile.setVerificationStatus(LocalVerificationStatus.MANUALLY_APPROVED);
         profile.setApprovalStatus(LocalApprovalStatus.APPROVED);
@@ -82,8 +99,12 @@ public class AdminOpsService {
             throw new BadRequestException("Local profile must be approved before creating experience");
         }
 
+        City city = cityRepository.findById(request.cityId())
+                .orElseThrow(() -> new ResourceNotFoundException("City not found"));
+
         Experience experience = new Experience();
         experience.setLocalProfile(localProfile);
+        experience.setCity(city);
 
         if (request.categoryId() != null) {
             ExperienceCategory category = experienceCategoryRepository.findById(request.categoryId())
@@ -96,8 +117,6 @@ public class AdminOpsService {
         experience.setTitle(requiredTrim(request.title()));
         experience.setSlug(generateSlug(request.title()));
         experience.setDescription(requiredTrim(request.description()));
-        experience.setCity(requiredTrim(request.city()));
-        experience.setCountry(requiredTrim(request.country()));
         experience.setMeetingArea(optionalTrim(request.meetingArea()));
         experience.setDurationMinutes(request.durationMinutes());
         experience.setPriceAmount(normalizeAmount(request.priceAmount()));
@@ -116,13 +135,19 @@ public class AdminOpsService {
                 profile.getUser().getId(),
 
                 profile.getDisplayName(),
+                profile.getPhoneNumber(),
                 profile.getBio(),
-                profile.getCity(),
-                profile.getCountry(),
-                profile.getLanguages(),
-                profile.getInterests(),
-                profile.getOccupation(),
                 profile.getProfilePhotoUrl(),
+                profile.getHostCity(),
+                profile.getZipCode(),
+                profile.getCountry(),
+
+                profile.getExperienceLanguages(),
+                profile.getExperienceCities().stream().map(this::toCityResponse).toList(),
+                profile.getExperienceCategories().stream().map(this::toCategoryResponse).toList(),
+
+                profile.getMotivation(),
+                profile.getExperienceInfo(),
 
                 profile.getVerificationStatus(),
                 profile.getApprovalStatus(),
@@ -137,9 +162,11 @@ public class AdminOpsService {
                 profile.getLegalFirstName(),
                 profile.getLegalLastName(),
                 profile.getPreferredName(),
-                profile.getCurrentCity(),
                 profile.getCurrentAddress(),
-                profile.getBuddyCity(),
+
+                profile.getAccountNumber(),
+                profile.getAccountName(),
+                profile.getSwiftCode(),
 
                 profile.getVerificationProvider(),
                 profile.getVerificationReferenceId(),
@@ -155,6 +182,57 @@ public class AdminOpsService {
         );
     }
 
+    private CityResponse toCityResponse(City city) {
+        return new CityResponse(
+                city.getId(),
+                city.getName(),
+                city.getSlug(),
+                city.getCountry(),
+                city.isActive(),
+                city.getDisplayOrder()
+        );
+    }
+
+    private ExperienceCategoryResponse toCategoryResponse(ExperienceCategory category) {
+        return new ExperienceCategoryResponse(
+                category.getId(),
+                category.getName(),
+                category.getSlug(),
+                category.getDescription(),
+                category.getDisplayOrder()
+        );
+    }
+
+    private List<City> resolveCities(List<UUID> cityIds) {
+        if (cityIds == null) {
+            return new ArrayList<>();
+        }
+
+        List<City> cities = new ArrayList<>();
+        for (UUID id : new LinkedHashSet<>(cityIds)) {
+            cities.add(cityRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("City not found")));
+        }
+        return cities;
+    }
+
+    private List<ExperienceCategory> resolveCategories(List<UUID> categoryIds) {
+        if (categoryIds == null) {
+            return new ArrayList<>();
+        }
+
+        List<ExperienceCategory> categories = new ArrayList<>();
+        for (UUID id : new LinkedHashSet<>(categoryIds)) {
+            categories.add(experienceCategoryRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Experience category not found")));
+        }
+        return categories;
+    }
+
+    private String defaulted(String value) {
+        return value == null ? "" : value.trim();
+    }
+
     private ExperienceResponse toExperienceResponse(Experience experience) {
         return new ExperienceResponse(
                 experience.getId(),
@@ -162,11 +240,13 @@ public class AdminOpsService {
                 experience.getCategory() != null ? experience.getCategory().getId() : null,
                 experience.getCategory() != null ? experience.getCategory().getName() : null,
                 experience.getCategory() != null ? experience.getCategory().getSlug() : null,
+                experience.getCity().getId(),
+                experience.getCity().getName(),
+                experience.getCity().getSlug(),
+                experience.getCity().getCountry(),
                 experience.getTitle(),
                 experience.getSlug(),
                 experience.getDescription(),
-                experience.getCity(),
-                experience.getCountry(),
                 experience.getMeetingArea(),
                 experience.getDurationMinutes(),
                 experience.getPriceAmount(),

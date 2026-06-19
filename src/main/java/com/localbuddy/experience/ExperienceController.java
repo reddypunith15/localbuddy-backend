@@ -1,5 +1,10 @@
 package com.localbuddy.experience;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +16,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/experiences")
+@Tag(name = "Experiences", description = "Endpoints for creating and managing a local's experiences")
+@SecurityRequirement(name = "bearerAuth")
 public class ExperienceController {
 
     private final ExperienceService experienceService;
@@ -19,6 +26,15 @@ public class ExperienceController {
         this.experienceService = experienceService;
     }
 
+    @Operation(
+            summary = "Create my experience",
+            description = "Creates a new experience for the currently authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Experience created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
+    })
     @PostMapping
     public ResponseEntity<ExperienceResponse> createMyExperience(
             Authentication authentication,
@@ -29,12 +45,29 @@ public class ExperienceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(
+            summary = "Get my experiences",
+            description = "Returns all experiences belonging to the currently authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Experiences retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
+    })
     @GetMapping("/me")
     public ResponseEntity<List<ExperienceResponse>> getMyExperiences(Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
         return ResponseEntity.ok(experienceService.getMyExperiences(userId));
     }
 
+    @Operation(
+            summary = "Get my experience by ID",
+            description = "Returns a single experience by its ID, if it belongs to the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Experience retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "Experience not found")
+    })
     @GetMapping("/me/{experienceId}")
     public ResponseEntity<ExperienceResponse> getMyExperienceById(
             Authentication authentication,
@@ -44,6 +77,16 @@ public class ExperienceController {
         return ResponseEntity.ok(experienceService.getMyExperienceById(userId, experienceId));
     }
 
+    @Operation(
+            summary = "Update my experience",
+            description = "Updates an existing experience owned by the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Experience updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "Experience not found")
+    })
     @PutMapping("/{experienceId}")
     public ResponseEntity<ExperienceResponse> updateMyExperience(
             Authentication authentication,
@@ -54,6 +97,15 @@ public class ExperienceController {
         return ResponseEntity.ok(experienceService.updateMyExperience(userId, experienceId, request));
     }
 
+    @Operation(
+            summary = "Submit my experience for review",
+            description = "Submits an experience owned by the authenticated user so an admin can review it."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Experience submitted successfully"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "Experience not found")
+    })
     @PostMapping("/{experienceId}/submit")
     public ResponseEntity<ExperienceResponse> submitMyExperience(
             Authentication authentication,

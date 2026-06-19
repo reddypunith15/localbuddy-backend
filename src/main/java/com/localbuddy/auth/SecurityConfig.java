@@ -30,11 +30,15 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/actuator/health",
                                 "/actuator/info",
+                                "/swagger-ui.html",
                                 "/swagger-ui/**",
+                                "/v3/api-docs",
                                 "/v3/api-docs/**",
+                                "/v3/api-docs.yaml",
                                 "/api/auth/**",
                                 "/api/public/**",
-                                "/api/experience-categories/**"
+                                "/api/experience-categories/**",
+                                "/api/cities/**"
                         ).permitAll()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

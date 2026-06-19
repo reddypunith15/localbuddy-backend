@@ -2,6 +2,12 @@ package com.localbuddy.localprofile;
 
 import com.localbuddy.common.exception.BadRequestException;
 import com.localbuddy.common.exception.ResourceNotFoundException;
+import com.localbuddy.experience.City;
+import com.localbuddy.experience.CityRepository;
+import com.localbuddy.experience.CityResponse;
+import com.localbuddy.experience.ExperienceCategory;
+import com.localbuddy.experience.ExperienceCategoryRepository;
+import com.localbuddy.experience.ExperienceCategoryResponse;
 import com.localbuddy.notification.NotificationService;
 import com.localbuddy.notification.NotificationType;
 import com.localbuddy.user.User;
@@ -11,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,13 +28,19 @@ public class LocalProfileService {
     private final LocalProfileRepository localProfileRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final CityRepository cityRepository;
+    private final ExperienceCategoryRepository categoryRepository;
 
     public LocalProfileService(LocalProfileRepository localProfileRepository,
                                UserRepository userRepository,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               CityRepository cityRepository,
+                               ExperienceCategoryRepository categoryRepository) {
         this.localProfileRepository = localProfileRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.cityRepository = cityRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     @Transactional
@@ -152,43 +166,99 @@ public class LocalProfileService {
     }
 
     private void applyCreateRequest(LocalProfile profile, CreateLocalProfileRequest request) {
-        profile.setDisplayName(request.displayName().trim());
-        profile.setBio(optionalTrim(request.bio()));
-        profile.setCity(request.city().trim());
-        profile.setCountry(request.country().trim());
+        profile.setDisplayName(requiredTrim(request.displayName()));
+        profile.setPhoneNumber(requiredTrim(request.phoneNumber()));
+        profile.setBio(requiredTrim(request.bio()));
+        profile.setProfilePhotoUrl(requiredTrim(request.profilePhotoUrl()));
+        profile.setHostCity(requiredTrim(request.hostCity()));
+        profile.setZipCode(requiredTrim(request.zipCode()));
+        profile.setCountry(requiredTrim(request.country()));
 
-        profile.setLanguages(request.languages() != null ? request.languages() : List.of());
-        profile.setInterests(request.interests() != null ? request.interests() : List.of());
+        profile.setExperienceLanguages(cleanRequiredList(request.experienceLanguages(), "experience language"));
+        profile.setExperienceCities(resolveActiveCities(request.experienceCityIds()));
+        profile.setExperienceCategories(resolveActiveCategories(request.experienceCategoryIds()));
 
-        profile.setOccupation(optionalTrim(request.occupation()));
-        profile.setProfilePhotoUrl(optionalTrim(request.profilePhotoUrl()));
+        profile.setMotivation(requiredTrim(request.motivation()));
+        profile.setExperienceInfo(requiredTrim(request.experienceInfo()));
 
-        profile.setLegalFirstName(optionalTrim(request.legalFirstName()));
-        profile.setLegalLastName(optionalTrim(request.legalLastName()));
-        profile.setPreferredName(optionalTrim(request.preferredName()));
-        profile.setCurrentCity(optionalTrim(request.currentCity()));
-        profile.setCurrentAddress(optionalTrim(request.currentAddress()));
-        profile.setBuddyCity(optionalTrim(request.buddyCity()));
+        profile.setLegalFirstName(requiredTrim(request.legalFirstName()));
+        profile.setLegalLastName(requiredTrim(request.legalLastName()));
+        profile.setPreferredName(requiredTrim(request.preferredName()));
+        profile.setCurrentAddress(requiredTrim(request.currentAddress()));
+
+        profile.setAccountNumber(optionalTrim(request.accountNumber()));
+        profile.setAccountName(optionalTrim(request.accountName()));
+        profile.setSwiftCode(optionalTrim(request.swiftCode()));
     }
 
     private void applyUpdateRequest(LocalProfile profile, UpdateLocalProfileRequest request) {
         profile.setDisplayName(requiredTrim(request.displayName()));
-        profile.setBio(optionalTrim(request.bio()));
-        profile.setCity(requiredTrim(request.city()));
+        profile.setPhoneNumber(requiredTrim(request.phoneNumber()));
+        profile.setBio(requiredTrim(request.bio()));
+        profile.setProfilePhotoUrl(requiredTrim(request.profilePhotoUrl()));
+        profile.setHostCity(requiredTrim(request.hostCity()));
+        profile.setZipCode(requiredTrim(request.zipCode()));
         profile.setCountry(requiredTrim(request.country()));
 
-        profile.setLanguages(cleanList(request.languages()));
-        profile.setInterests(cleanList(request.interests()));
+        profile.setExperienceLanguages(cleanRequiredList(request.experienceLanguages(), "experience language"));
+        profile.setExperienceCities(resolveActiveCities(request.experienceCityIds()));
+        profile.setExperienceCategories(resolveActiveCategories(request.experienceCategoryIds()));
 
-        profile.setOccupation(optionalTrim(request.occupation()));
-        profile.setProfilePhotoUrl(optionalTrim(request.profilePhotoUrl()));
+        profile.setMotivation(requiredTrim(request.motivation()));
+        profile.setExperienceInfo(requiredTrim(request.experienceInfo()));
 
-        profile.setLegalFirstName(optionalTrim(request.legalFirstName()));
-        profile.setLegalLastName(optionalTrim(request.legalLastName()));
-        profile.setPreferredName(optionalTrim(request.preferredName()));
-        profile.setCurrentCity(optionalTrim(request.currentCity()));
-        profile.setCurrentAddress(optionalTrim(request.currentAddress()));
-        profile.setBuddyCity(optionalTrim(request.buddyCity()));
+        profile.setLegalFirstName(requiredTrim(request.legalFirstName()));
+        profile.setLegalLastName(requiredTrim(request.legalLastName()));
+        profile.setPreferredName(requiredTrim(request.preferredName()));
+        profile.setCurrentAddress(requiredTrim(request.currentAddress()));
+
+        profile.setAccountNumber(optionalTrim(request.accountNumber()));
+        profile.setAccountName(optionalTrim(request.accountName()));
+        profile.setSwiftCode(optionalTrim(request.swiftCode()));
+    }
+
+    private List<City> resolveActiveCities(List<UUID> cityIds) {
+        List<City> cities = new ArrayList<>();
+
+        for (UUID cityId : new LinkedHashSet<>(cityIds)) {
+            City city = cityRepository.findById(cityId)
+                    .orElseThrow(() -> new BadRequestException("Invalid city selected"));
+
+            if (!city.isActive()) {
+                throw new BadRequestException("City '" + city.getName() + "' is not available");
+            }
+
+            cities.add(city);
+        }
+
+        return cities;
+    }
+
+    private List<ExperienceCategory> resolveActiveCategories(List<UUID> categoryIds) {
+        List<ExperienceCategory> categories = new ArrayList<>();
+
+        for (UUID categoryId : new LinkedHashSet<>(categoryIds)) {
+            ExperienceCategory category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new BadRequestException("Invalid experience category selected"));
+
+            if (!category.isActive()) {
+                throw new BadRequestException("Experience category '" + category.getName() + "' is not available");
+            }
+
+            categories.add(category);
+        }
+
+        return categories;
+    }
+
+    private List<String> cleanRequiredList(List<String> values, String label) {
+        List<String> cleaned = cleanList(values);
+
+        if (cleaned.isEmpty()) {
+            throw new BadRequestException("At least one " + label + " is required");
+        }
+
+        return cleaned;
     }
 
     private String requiredTrim(String value) {
@@ -220,13 +290,19 @@ public class LocalProfileService {
                 profile.getUser().getId(),
 
                 profile.getDisplayName(),
+                profile.getPhoneNumber(),
                 profile.getBio(),
-                profile.getCity(),
-                profile.getCountry(),
-                profile.getLanguages(),
-                profile.getInterests(),
-                profile.getOccupation(),
                 profile.getProfilePhotoUrl(),
+                profile.getHostCity(),
+                profile.getZipCode(),
+                profile.getCountry(),
+
+                profile.getExperienceLanguages(),
+                profile.getExperienceCities().stream().map(this::toCityResponse).toList(),
+                profile.getExperienceCategories().stream().map(this::toCategoryResponse).toList(),
+
+                profile.getMotivation(),
+                profile.getExperienceInfo(),
 
                 profile.getVerificationStatus(),
                 profile.getApprovalStatus(),
@@ -241,9 +317,11 @@ public class LocalProfileService {
                 profile.getLegalFirstName(),
                 profile.getLegalLastName(),
                 profile.getPreferredName(),
-                profile.getCurrentCity(),
                 profile.getCurrentAddress(),
-                profile.getBuddyCity(),
+
+                profile.getAccountNumber(),
+                profile.getAccountName(),
+                profile.getSwiftCode(),
 
                 profile.getVerificationProvider(),
                 profile.getVerificationReferenceId(),
@@ -256,6 +334,27 @@ public class LocalProfileService {
 
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
+        );
+    }
+
+    private CityResponse toCityResponse(City city) {
+        return new CityResponse(
+                city.getId(),
+                city.getName(),
+                city.getSlug(),
+                city.getCountry(),
+                city.isActive(),
+                city.getDisplayOrder()
+        );
+    }
+
+    private ExperienceCategoryResponse toCategoryResponse(ExperienceCategory category) {
+        return new ExperienceCategoryResponse(
+                category.getId(),
+                category.getName(),
+                category.getSlug(),
+                category.getDescription(),
+                category.getDisplayOrder()
         );
     }
 
@@ -318,7 +417,7 @@ public class LocalProfileService {
         }
 
         return localProfileRepository
-                .findByCityIgnoreCaseAndApprovalStatus(city.trim(), LocalApprovalStatus.APPROVED)
+                .findByHostCityIgnoreCaseAndApprovalStatus(city.trim(), LocalApprovalStatus.APPROVED)
                 .stream()
                 .map(this::toResponse)
                 .toList();

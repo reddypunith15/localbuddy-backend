@@ -1,9 +1,11 @@
 package com.localbuddy.localprofile;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.UUID;
 
 public record UpdateLocalProfileRequest(
 
@@ -11,42 +13,70 @@ public record UpdateLocalProfileRequest(
         @Size(max = 150, message = "Display name cannot exceed 150 characters")
         String displayName,
 
+        @NotBlank(message = "Phone number is required")
+        @Size(max = 40, message = "Phone number cannot exceed 40 characters")
+        String phoneNumber,
+
+        @NotBlank(message = "Bio is required")
         @Size(max = 2000, message = "Bio cannot exceed 2000 characters")
         String bio,
 
-        @NotBlank(message = "City is required")
-        @Size(max = 100, message = "City cannot exceed 100 characters")
-        String city,
+        @NotBlank(message = "Profile photo is required")
+        @Size(max = 2000, message = "Profile photo URL cannot exceed 2000 characters")
+        String profilePhotoUrl,
+
+        @NotBlank(message = "Host city is required")
+        @Size(max = 100, message = "Host city cannot exceed 100 characters")
+        String hostCity,
+
+        @NotBlank(message = "Zip code is required")
+        @Size(max = 20, message = "Zip code cannot exceed 20 characters")
+        String zipCode,
 
         @NotBlank(message = "Country is required")
         @Size(max = 100, message = "Country cannot exceed 100 characters")
         String country,
 
-        List<String> languages,
+        @NotEmpty(message = "At least one experience city is required")
+        List<UUID> experienceCityIds,
 
-        List<String> interests,
+        @NotEmpty(message = "At least one experience category is required")
+        List<UUID> experienceCategoryIds,
 
-        @Size(max = 150, message = "Occupation cannot exceed 150 characters")
-        String occupation,
+        @NotEmpty(message = "At least one experience language is required")
+        List<String> experienceLanguages,
 
-        String profilePhotoUrl,
+        @NotBlank(message = "Motivation is required")
+        @Size(max = 3000, message = "Motivation cannot exceed 3000 characters")
+        String motivation,
 
+        @NotBlank(message = "Experience info is required")
+        @Size(max = 5000, message = "Experience info cannot exceed 5000 characters")
+        String experienceInfo,
+
+        @NotBlank(message = "Legal first name is required")
         @Size(max = 120, message = "Legal first name cannot exceed 120 characters")
         String legalFirstName,
 
+        @NotBlank(message = "Legal last name is required")
         @Size(max = 120, message = "Legal last name cannot exceed 120 characters")
         String legalLastName,
 
+        @NotBlank(message = "Preferred name is required")
         @Size(max = 120, message = "Preferred name cannot exceed 120 characters")
         String preferredName,
 
-        @Size(max = 120, message = "Current city cannot exceed 120 characters")
-        String currentCity,
-
+        @NotBlank(message = "Current address is required")
         @Size(max = 2000, message = "Current address cannot exceed 2000 characters")
         String currentAddress,
 
-        @Size(max = 120, message = "Buddy city cannot exceed 120 characters")
-        String buddyCity
+        @Size(max = 64, message = "Account number cannot exceed 64 characters")
+        String accountNumber,
+
+        @Size(max = 150, message = "Account name cannot exceed 150 characters")
+        String accountName,
+
+        @Size(max = 32, message = "Swift code cannot exceed 32 characters")
+        String swiftCode
 ) {
 }

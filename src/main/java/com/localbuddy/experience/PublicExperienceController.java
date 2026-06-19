@@ -18,10 +18,10 @@ public class PublicExperienceController {
 
     @GetMapping
     public ResponseEntity<List<ExperienceResponse>> getApprovedExperiences(
-            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String citySlug,
             @RequestParam(required = false) String categorySlug
     ) {
-        return ResponseEntity.ok(experienceService.getApprovedExperiences(city, categorySlug));
+        return ResponseEntity.ok(experienceService.getApprovedExperiences(citySlug, categorySlug));
     }
 
     @GetMapping("/{experienceId}")

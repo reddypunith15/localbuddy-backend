@@ -15,7 +15,7 @@ public interface LocalProfileRepository extends JpaRepository<LocalProfile, UUID
 
     boolean existsByUserId(UUID userId);
 
-    List<LocalProfile> findByCityIgnoreCaseAndApprovalStatus(String city, LocalApprovalStatus approvalStatus);
+    List<LocalProfile> findByHostCityIgnoreCaseAndApprovalStatus(String hostCity, LocalApprovalStatus approvalStatus);
 
     List<LocalProfile> findByApprovalStatus(LocalApprovalStatus approvalStatus);
     long countByApprovalStatus(LocalApprovalStatus approvalStatus);

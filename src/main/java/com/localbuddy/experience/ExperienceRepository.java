@@ -20,15 +20,15 @@ public interface ExperienceRepository extends JpaRepository<Experience, UUID> {
 
     List<Experience> findByStatus(ExperienceStatus status);
 
-    List<Experience> findByCityIgnoreCaseAndStatus(String city, ExperienceStatus status);
+    List<Experience> findByCity_SlugAndStatus(String citySlug, ExperienceStatus status);
 
-    List<Experience> findByCityIgnoreCaseAndCategorySlugAndStatus(
-            String city,
+    List<Experience> findByCity_SlugAndCategory_SlugAndStatus(
+            String citySlug,
             String categorySlug,
             ExperienceStatus status
     );
 
-    List<Experience> findByCategorySlugAndStatus(
+    List<Experience> findByCategory_SlugAndStatus(
             String categorySlug,
             ExperienceStatus status
     );

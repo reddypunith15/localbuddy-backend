@@ -12,6 +12,9 @@ public record AdminCreateExperienceRequest(
 
         UUID categoryId,
 
+        @NotNull(message = "City id is required")
+        UUID cityId,
+
         @NotBlank(message = "Title is required")
         @Size(max = 150, message = "Title cannot exceed 150 characters")
         String title,
@@ -19,14 +22,6 @@ public record AdminCreateExperienceRequest(
         @NotBlank(message = "Description is required")
         @Size(max = 3000, message = "Description cannot exceed 3000 characters")
         String description,
-
-        @NotBlank(message = "City is required")
-        @Size(max = 100, message = "City cannot exceed 100 characters")
-        String city,
-
-        @NotBlank(message = "Country is required")
-        @Size(max = 100, message = "Country cannot exceed 100 characters")
-        String country,
 
         @Size(max = 150, message = "Meeting area cannot exceed 150 characters")
         String meetingArea,

@@ -30,6 +30,10 @@ public class Experience {
     @JoinColumn(name = "category_id")
     private ExperienceCategory category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id", nullable = false)
+    private City city;
+
     @Column(name = "title", nullable = false, length = 150)
     private String title;
 
@@ -38,12 +42,6 @@ public class Experience {
 
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "city", nullable = false, length = 100)
-    private String city;
-
-    @Column(name = "country", nullable = false, length = 100)
-    private String country;
 
     @Column(name = "meeting_area", length = 150)
     private String meetingArea;

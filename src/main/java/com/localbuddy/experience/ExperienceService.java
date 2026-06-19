@@ -21,15 +21,18 @@ public class ExperienceService {
 
     private final ExperienceRepository experienceRepository;
     private final ExperienceCategoryRepository categoryRepository;
+    private final CityRepository cityRepository;
     private final LocalProfileRepository localProfileRepository;
     private final ConsentService consentService;
     private final TrustSafetyService trustSafetyService;
 
     public ExperienceService(ExperienceRepository experienceRepository,
                              ExperienceCategoryRepository categoryRepository,
+                             CityRepository cityRepository,
                              LocalProfileRepository localProfileRepository  , ConsentService consentService, TrustSafetyService trustSafetyService) {
         this.experienceRepository = experienceRepository;
         this.categoryRepository = categoryRepository;
+        this.cityRepository = cityRepository;
         this.localProfileRepository = localProfileRepository;
         this.consentService = consentService;
         this.trustSafetyService = trustSafetyService;
@@ -41,10 +44,12 @@ public class ExperienceService {
         trustSafetyService.requireUserCanHost(userId);
         LocalProfile localProfile = getApprovedLocalProfileByUserId(userId);
         ExperienceCategory category = getActiveCategory(request.categoryId());
+        City city = getActiveCity(request.cityId());
 
         Experience experience = new Experience();
         experience.setLocalProfile(localProfile);
         experience.setCategory(category);
+        experience.setCity(city);
         applyCreateRequest(experience, request);
         experience.setSlug(generateUniqueSlug(request.title()));
         experience.setStatus(ExperienceStatus.DRAFT);
@@ -92,8 +97,10 @@ public class ExperienceService {
         }
 
         ExperienceCategory category = getActiveCategory(request.categoryId());
+        City city = getActiveCity(request.cityId());
 
         experience.setCategory(category);
+        experience.setCity(city);
         applyUpdateRequest(experience, request);
 
         if (experience.getStatus() == ExperienceStatus.APPROVED) {
@@ -158,12 +165,25 @@ public class ExperienceService {
         return category;
     }
 
+    private City getActiveCity(UUID cityId) {
+        if (cityId == null) {
+            throw new BadRequestException("City is required");
+        }
+
+        City city = cityRepository.findById(cityId)
+                .orElseThrow(() -> new BadRequestException("Invalid city"));
+
+        if (!city.isActive()) {
+            throw new BadRequestException("City is not available for new experiences");
+        }
+
+        return city;
+    }
+
 
     private void applyCreateRequest(Experience experience, CreateExperienceRequest request) {
         experience.setTitle(requiredTrim(request.title()));
         experience.setDescription(requiredTrim(request.description()));
-        experience.setCity(requiredTrim(request.city()));
-        experience.setCountry(requiredTrim(request.country()));
         experience.setMeetingArea(optionalTrim(request.meetingArea()));
         experience.setDurationMinutes(request.durationMinutes());
         experience.setPriceAmount(normalizePrice(request.priceAmount()));
@@ -175,8 +195,6 @@ public class ExperienceService {
     private void applyUpdateRequest(Experience experience, UpdateExperienceRequest request) {
         experience.setTitle(requiredTrim(request.title()));
         experience.setDescription(requiredTrim(request.description()));
-        experience.setCity(requiredTrim(request.city()));
-        experience.setCountry(requiredTrim(request.country()));
         experience.setMeetingArea(optionalTrim(request.meetingArea()));
         experience.setDurationMinutes(request.durationMinutes());
         experience.setPriceAmount(normalizePrice(request.priceAmount()));
@@ -234,11 +252,13 @@ public class ExperienceService {
                 experience.getCategory() != null ? experience.getCategory().getId() : null,
                 experience.getCategory() != null ? experience.getCategory().getName() : null,
                 experience.getCategory() != null ? experience.getCategory().getSlug() : null,
+                experience.getCity().getId(),
+                experience.getCity().getName(),
+                experience.getCity().getSlug(),
+                experience.getCity().getCountry(),
                 experience.getTitle(),
                 experience.getSlug(),
                 experience.getDescription(),
-                experience.getCity(),
-                experience.getCountry(),
                 experience.getMeetingArea(),
                 experience.getDurationMinutes(),
                 experience.getPriceAmount(),
@@ -289,18 +309,22 @@ public class ExperienceService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExperienceResponse> getApprovedExperiences(String city, String categorySlug) {
-        String normalizedCity = optionalTrim(city);
+    public List<ExperienceResponse> getApprovedExperiences(String citySlug, String categorySlug) {
+        String normalizedCitySlug = optionalTrim(citySlug);
         String normalizedCategorySlug = optionalTrim(categorySlug);
+
+        if (normalizedCitySlug != null) {
+            normalizedCitySlug = normalizedCitySlug.toLowerCase(Locale.ROOT);
+        }
 
         if (normalizedCategorySlug != null) {
             normalizedCategorySlug = normalizedCategorySlug.toLowerCase(Locale.ROOT);
         }
 
-        if (normalizedCity != null && normalizedCategorySlug != null) {
+        if (normalizedCitySlug != null && normalizedCategorySlug != null) {
             return experienceRepository
-                    .findByCityIgnoreCaseAndCategorySlugAndStatus(
-                            normalizedCity,
+                    .findByCity_SlugAndCategory_SlugAndStatus(
+                            normalizedCitySlug,
                             normalizedCategorySlug,
                             ExperienceStatus.APPROVED
                     )
@@ -309,9 +333,9 @@ public class ExperienceService {
                     .toList();
         }
 
-        if (normalizedCity != null) {
+        if (normalizedCitySlug != null) {
             return experienceRepository
-                    .findByCityIgnoreCaseAndStatus(normalizedCity, ExperienceStatus.APPROVED)
+                    .findByCity_SlugAndStatus(normalizedCitySlug, ExperienceStatus.APPROVED)
                     .stream()
                     .map(this::toResponse)
                     .toList();
@@ -319,7 +343,7 @@ public class ExperienceService {
 
         if (normalizedCategorySlug != null) {
             return experienceRepository
-                    .findByCategorySlugAndStatus(normalizedCategorySlug, ExperienceStatus.APPROVED)
+                    .findByCategory_SlugAndStatus(normalizedCategorySlug, ExperienceStatus.APPROVED)
                     .stream()
                     .map(this::toResponse)
                     .toList();

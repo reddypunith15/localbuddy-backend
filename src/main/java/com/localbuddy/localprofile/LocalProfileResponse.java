@@ -1,5 +1,8 @@
 package com.localbuddy.localprofile;
 
+import com.localbuddy.experience.CityResponse;
+import com.localbuddy.experience.ExperienceCategoryResponse;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -10,13 +13,19 @@ public record LocalProfileResponse(
         UUID userId,
 
         String displayName,
+        String phoneNumber,
         String bio,
-        String city,
-        String country,
-        List<String> languages,
-        List<String> interests,
-        String occupation,
         String profilePhotoUrl,
+        String hostCity,
+        String zipCode,
+        String country,
+
+        List<String> experienceLanguages,
+        List<CityResponse> experienceCities,
+        List<ExperienceCategoryResponse> experienceCategories,
+
+        String motivation,
+        String experienceInfo,
 
         LocalVerificationStatus verificationStatus,
         LocalApprovalStatus approvalStatus,
@@ -31,9 +40,11 @@ public record LocalProfileResponse(
         String legalFirstName,
         String legalLastName,
         String preferredName,
-        String currentCity,
         String currentAddress,
-        String buddyCity,
+
+        String accountNumber,
+        String accountName,
+        String swiftCode,
 
         String verificationProvider,
         String verificationReferenceId,

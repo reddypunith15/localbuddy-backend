@@ -1,5 +1,7 @@
 package com.localbuddy.localprofile;
 
+import com.localbuddy.experience.City;
+import com.localbuddy.experience.ExperienceCategory;
 import com.localbuddy.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,6 +12,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,27 +35,48 @@ public class LocalProfile {
     @Column(name = "display_name", nullable = false, length = 150)
     private String displayName;
 
-    @Column(name = "bio", columnDefinition = "TEXT")
+    @Column(name = "bio", nullable = false, columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "city", nullable = false, length = 100)
-    private String city;
+    @Column(name = "phone_number", nullable = false, length = 40)
+    private String phoneNumber;
+
+    @Column(name = "host_city", nullable = false, length = 100)
+    private String hostCity;
+
+    @Column(name = "zip_code", nullable = false, length = 20)
+    private String zipCode;
 
     @Column(name = "country", nullable = false, length = 100)
     private String country;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "languages", columnDefinition = "jsonb")
-    private List<String> languages = List.of();
+    @Column(name = "experience_languages", columnDefinition = "jsonb")
+    private List<String> experienceLanguages = new ArrayList<>();
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "interests", columnDefinition = "jsonb")
-    private List<String> interests = List.of();
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "local_profile_experience_cities",
+            joinColumns = @JoinColumn(name = "local_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "city_id")
+    )
+    private List<City> experienceCities = new ArrayList<>();
 
-    @Column(name = "occupation", length = 150)
-    private String occupation;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "local_profile_experience_categories",
+            joinColumns = @JoinColumn(name = "local_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private List<ExperienceCategory> experienceCategories = new ArrayList<>();
 
-    @Column(name = "profile_photo_url", columnDefinition = "TEXT")
+    @Column(name = "motivation", nullable = false, columnDefinition = "TEXT")
+    private String motivation;
+
+    @Column(name = "experience_info", nullable = false, columnDefinition = "TEXT")
+    private String experienceInfo;
+
+    @Column(name = "profile_photo_url", nullable = false, columnDefinition = "TEXT")
     private String profilePhotoUrl;
 
     @Enumerated(EnumType.STRING)
@@ -81,23 +105,26 @@ public class LocalProfile {
     @Column(name = "resubmitted_at")
     private Instant resubmittedAt;
 
-    @Column(name = "legal_first_name", length = 120)
+    @Column(name = "legal_first_name", nullable = false, length = 120)
     private String legalFirstName;
 
-    @Column(name = "legal_last_name", length = 120)
+    @Column(name = "legal_last_name", nullable = false, length = 120)
     private String legalLastName;
 
-    @Column(name = "preferred_name", length = 120)
+    @Column(name = "preferred_name", nullable = false, length = 120)
     private String preferredName;
 
-    @Column(name = "current_city", length = 120)
-    private String currentCity;
-
-    @Column(name = "current_address", columnDefinition = "TEXT")
+    @Column(name = "current_address", nullable = false, columnDefinition = "TEXT")
     private String currentAddress;
 
-    @Column(name = "buddy_city", length = 120)
-    private String buddyCity;
+    @Column(name = "account_number", length = 64)
+    private String accountNumber;
+
+    @Column(name = "account_name", length = 150)
+    private String accountName;
+
+    @Column(name = "swift_code", length = 32)
+    private String swiftCode;
 
     @Column(name = "verification_provider", length = 80)
     private String verificationProvider;
@@ -154,12 +181,16 @@ public class LocalProfile {
             totalReviews = 0;
         }
 
-        if (languages == null) {
-            languages = List.of();
+        if (experienceLanguages == null) {
+            experienceLanguages = new ArrayList<>();
         }
 
-        if (interests == null) {
-            interests = List.of();
+        if (experienceCities == null) {
+            experienceCities = new ArrayList<>();
+        }
+
+        if (experienceCategories == null) {
+            experienceCategories = new ArrayList<>();
         }
     }
 
